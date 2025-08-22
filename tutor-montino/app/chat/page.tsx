@@ -13,9 +13,6 @@ function generateId(): string {
   return Math.random().toString(36).slice(2);
 }
 
-const isBrowser = typeof window !== "undefined";
-const hasSpeechSynthesis = isBrowser && "speechSynthesis" in window;
-
 type SpeechRecognitionResultLike = ArrayLike<{ transcript: string }>;
 interface SpeechRecognitionEventLike {
   results: ArrayLike<SpeechRecognitionResultLike>;
@@ -23,25 +20,17 @@ interface SpeechRecognitionEventLike {
 interface ISpeechRecognition {
   lang: string;
   interimResults: boolean;
+  continuous?: boolean;
   onresult: (event: SpeechRecognitionEventLike) => void;
   onend: () => void;
-  onerror: () => void;
+  onerror: (event: Event & { error?: string }) => void;
+  onstart?: () => void;
   start: () => void;
   stop: () => void;
 }
 interface SpeechRecognitionConstructor {
   new (): ISpeechRecognition;
 }
-
-const SpeechRecognitionCtor: SpeechRecognitionConstructor | null = isBrowser
-  ? (() => {
-      const win = window as unknown as {
-        webkitSpeechRecognition?: SpeechRecognitionConstructor;
-        SpeechRecognition?: SpeechRecognitionConstructor;
-      };
-      return win.webkitSpeechRecognition ?? win.SpeechRecognition ?? null;
-    })()
-  : null;
 
 export default function ChatPage() {
   const [mode, setMode] = useState<"aprendiz" | "verificador">("aprendiz");
@@ -51,7 +40,40 @@ export default function ChatPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [speakReplies, setSpeakReplies] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [ttsSupported, setTtsSupported] = useState(false);
+  const [speechError, setSpeechError] = useState<string | null>(null);
+  
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
+  const speechRecognitionRef = useRef<SpeechRecognitionConstructor | null>(null);
+
+  // Inicializar después de la hidratación
+  useEffect(() => {
+    setIsClient(true);
+    
+    try {
+      // Verificar soporte de Speech Recognition
+      const win = window as Window & {
+        webkitSpeechRecognition?: SpeechRecognitionConstructor;
+        SpeechRecognition?: SpeechRecognitionConstructor;
+      };
+      const SpeechRecognitionCtor = win.webkitSpeechRecognition || win.SpeechRecognition || null;
+      speechRecognitionRef.current = SpeechRecognitionCtor;
+      setSpeechSupported(!!SpeechRecognitionCtor);
+      
+      // Verificar soporte de Speech Synthesis
+      setTtsSupported("speechSynthesis" in window);
+      
+      console.log("Speech Recognition disponible:", !!SpeechRecognitionCtor);
+      console.log("Speech Synthesis disponible:", "speechSynthesis" in window);
+      
+    } catch (error) {
+      console.error("Error al verificar capacidades de voz:", error);
+      setSpeechSupported(false);
+      setTtsSupported(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!imageFile) {
@@ -64,38 +86,110 @@ export default function ChatPage() {
   }, [imageFile]);
 
   const startListening = () => {
-    if (!SpeechRecognitionCtor || listening) return;
-    const rec = new SpeechRecognitionCtor();
-    rec.lang = "es-ES";
-    rec.interimResults = false;
-    rec.onresult = (e: SpeechRecognitionEventLike) => {
-      const transcript = Array.from(e.results)
-        .map((r) => (r as SpeechRecognitionResultLike)[0].transcript)
-        .join(" ");
-      setInput((prev) => (prev ? prev + " " : "") + transcript);
-    };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    rec.start();
-    recognitionRef.current = rec;
-    setListening(true);
+    if (!speechRecognitionRef.current || listening || !isClient) {
+      console.log("No se puede iniciar:", { 
+        hasRecognition: !!speechRecognitionRef.current, 
+        listening, 
+        isClient 
+      });
+      return;
+    }
+    
+    setSpeechError(null);
+    
+    try {
+      const rec = new speechRecognitionRef.current();
+      rec.lang = "es-ES";
+      rec.interimResults = false;
+      rec.continuous = false;
+      
+      rec.onstart = () => {
+        console.log("Reconocimiento iniciado");
+        setListening(true);
+      };
+      
+      rec.onresult = (e: SpeechRecognitionEventLike) => {
+        console.log("Resultado recibido:", e);
+        try {
+          const transcript = Array.from(e.results)
+            .map((r) => (r as SpeechRecognitionResultLike)[0].transcript)
+            .join(" ");
+          console.log("Transcripción:", transcript);
+          setInput((prev) => (prev ? prev + " " : "") + transcript);
+        } catch (error) {
+          console.error("Error procesando resultado:", error);
+        }
+      };
+      
+      rec.onend = () => {
+        console.log("Reconocimiento terminado");
+        setListening(false);
+      };
+      
+      rec.onerror = (event: Event & { error?: string }) => {
+        console.error("Error en reconocimiento de voz:", event);
+        const errorMsg = event.error || "Error desconocido";
+        setSpeechError(`Error: ${errorMsg}`);
+        setListening(false);
+        
+        // Mostrar mensaje específico según el error
+        if (errorMsg === "not-allowed") {
+          setSpeechError("Permisos de micrófono denegados. Permite el acceso al micrófono.");
+        } else if (errorMsg === "no-speech") {
+          setSpeechError("No se detectó voz. Intenta hablar más cerca del micrófono.");
+        } else if (errorMsg === "audio-capture") {
+          setSpeechError("No se pudo acceder al micrófono. Verifica que esté conectado.");
+        } else if (errorMsg === "network") {
+          setSpeechError("Error de red. Verifica tu conexión a internet.");
+        }
+      };
+      
+      recognitionRef.current = rec;
+      console.log("Iniciando reconocimiento...");
+      rec.start();
+      
+    } catch (error) {
+      console.error("Error al crear reconocimiento:", error);
+      setSpeechError("Error al inicializar el reconocimiento de voz");
+      setListening(false);
+    }
   };
 
   const stopListening = () => {
-    recognitionRef.current?.stop();
+    if (recognitionRef.current) {
+      console.log("Deteniendo reconocimiento...");
+      recognitionRef.current.stop();
+    }
     setListening(false);
   };
 
   const speak = (text: string) => {
-    if (!hasSpeechSynthesis || !speakReplies) return;
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "es-ES";
-    window.speechSynthesis.speak(utter);
+    if (!ttsSupported || !speakReplies || !isClient) return;
+    
+    try {
+      // Cancelar cualquier síntesis anterior
+      window.speechSynthesis.cancel();
+      
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "es-ES";
+      utter.rate = 0.9;
+      utter.pitch = 1;
+      utter.volume = 0.8;
+      
+      utter.onstart = () => console.log("TTS iniciado");
+      utter.onend = () => console.log("TTS terminado");
+      utter.onerror = (e) => console.error("Error TTS:", e);
+      
+      window.speechSynthesis.speak(utter);
+    } catch (error) {
+      console.error("Error en síntesis de voz:", error);
+    }
   };
 
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed && !imageFile) return;
+    
     const userMsg: ChatMessage = {
       id: generateId(),
       role: "user",
@@ -120,16 +214,26 @@ export default function ChatPage() {
           body: JSON.stringify({ mode, message: trimmed }),
         });
       }
+      
+      if (!res.ok) {
+        throw new Error(`Error HTTP: ${res.status}`);
+      }
+      
       const data: { reply?: string } = await res.json();
       const reply = data.reply ?? "(sin respuesta)";
       const botMsg: ChatMessage = { id: generateId(), role: "assistant", text: reply };
       setMessages((prev) => [...prev, botMsg]);
-      speak(reply);
-    } catch {
+      
+      // Leer respuesta si está habilitado
+      if (speakReplies) {
+        speak(reply);
+      }
+    } catch (error) {
+      console.error("Error al enviar mensaje:", error);
       const botMsg: ChatMessage = {
         id: generateId(),
         role: "assistant",
-        text: "Ocurrió un error al contactar el servidor.",
+        text: "Ocurrió un error al contactar el servidor. Por favor, intenta nuevamente.",
       };
       setMessages((prev) => [...prev, botMsg]);
     } finally {
@@ -137,42 +241,85 @@ export default function ChatPage() {
     }
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const clearSpeechError = () => {
+    setSpeechError(null);
+  };
+
+  // Renderizar solo después de la hidratación para evitar errores
+  if (!isClient) {
+    return (
+      <div className="grid gap-4">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-sm opacity-70">Cargando...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4">
-      <div className="flex gap-2 items-center">
-        <span className="text-sm">Modo:</span>
+      <div className="flex gap-2 items-center flex-wrap">
+        <span className="text-sm font-medium">Modo:</span>
         <button
-          className={`px-3 py-1 rounded border ${
-            mode === "aprendiz" ? "bg-black text-white dark:bg:white dark:text-black" : ""
+          className={`px-3 py-1 rounded border transition-colors ${
+            mode === "aprendiz" 
+              ? "bg-black text-white dark:bg-white dark:text-black" 
+              : "hover:bg-gray-50 dark:hover:bg-gray-800"
           }`}
           onClick={() => setMode("aprendiz")}
         >
           Aprendiz
         </button>
         <button
-          className={`px-3 py-1 rounded border ${
-            mode === "verificador" ? "bg-black text-white dark:bg:white dark:text:black" : ""
+          className={`px-3 py-1 rounded border transition-colors ${
+            mode === "verificador" 
+              ? "bg-black text-white dark:bg-white dark:text-black" 
+              : "hover:bg-gray-50 dark:hover:bg-gray-800"
           }`}
           onClick={() => setMode("verificador")}
         >
           Verificador
         </button>
-        <label className="ml-auto flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={speakReplies}
-            onChange={(e) => setSpeakReplies(e.target.checked)}
-          />
-          Leer respuestas
-        </label>
+        
+        {ttsSupported && (
+          <label className="ml-auto flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={speakReplies}
+              onChange={(e) => setSpeakReplies(e.target.checked)}
+            />
+            Leer respuestas
+          </label>
+        )}
       </div>
+
+      {speechError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 flex items-start gap-2">
+          <span className="text-red-600 dark:text-red-400 text-sm flex-1">
+            🎤 {speechError}
+          </span>
+          <button 
+            onClick={clearSpeechError}
+            className="text-red-600 hover:text-red-800 text-sm underline"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
 
       <div className="border rounded p-3 h-[50vh] overflow-auto bg-black/5 dark:bg-white/5">
         {messages.length === 0 && (
           <div className="text-sm opacity-70">
             {mode === "aprendiz"
-              ? "Describe qué decreto necesitas y te guiaré paso a paso."
-              : "Pega tu borrador y te ayudaré a verificarlo y mejorarlo."}
+              ? "Describe qué documento necesitas y te guiaré paso a paso. También puedes adjuntar una imagen de un documento existente."
+              : "Pega tu borrador o adjunta una imagen del documento y te ayudaré a verificarlo y mejorarlo."}
           </div>
         )}
         <div className="grid gap-3">
@@ -192,13 +339,13 @@ export default function ChatPage() {
                     : "bg-gray-100 dark:bg-gray-800"
                 }`}
               >
-                <div>{m.text}</div>
+                <div className="whitespace-pre-wrap">{m.text}</div>
                 {m.imageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={m.imageUrl}
                     alt="adjunta"
-                    className="mt-2 max-h-40 rounded"
+                    className="mt-2 max-h-40 rounded border"
                   />
                 )}
               </div>
@@ -209,52 +356,88 @@ export default function ChatPage() {
 
       <div className="grid gap-2">
         {imagePreview && (
-          <div className="text-xs opacity-70 flex items-center gap-2">
-            Imagen adjunta
+          <div className="text-xs opacity-70 flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+            <span>📎 Imagen adjunta:</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imagePreview}
               alt="vista previa"
-              className="h-10 w-10 object-cover rounded"
+              className="h-10 w-10 object-cover rounded border"
             />
-            <button className="underline" onClick={() => setImageFile(null)}>
+            <button 
+              className="underline hover:no-underline text-blue-600 dark:text-blue-400" 
+              onClick={() => setImageFile(null)}
+            >
               Quitar
             </button>
           </div>
         )}
+        
         <div className="flex gap-2 items-center">
-          <input
+          <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe tu mensaje..."
-            className="flex-1 border rounded px-3 py-2 text-sm bg-transparent"
+            onKeyDown={handleKeyPress}
+            placeholder="Escribe tu mensaje o pregunta..."
+            className="flex-1 border rounded px-3 py-2 text-sm bg-transparent resize-none min-h-[40px] max-h-[120px]"
+            rows={1}
           />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-            className="text-sm"
-          />
-          {!listening ? (
-            <button
-              className="border rounded px-3"
-              onClick={startListening}
-              disabled={!SpeechRecognitionCtor}
-              title={SpeechRecognitionCtor ? "Empezar dictado" : "Dictado no disponible"}
-            >
-              🎤
-            </button>
-          ) : (
-            <button className="border rounded px-3" onClick={stopListening} title="Detener dictado">
-              ⏹
-            </button>
+          
+          <label className="cursor-pointer border rounded px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm flex items-center gap-1">
+            📎
+            <span className="hidden sm:inline">Imagen</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+              className="hidden"
+              title="Adjuntar imagen"
+            />
+          </label>
+          
+          {speechSupported && (
+            <>
+              {!listening ? (
+                <button
+                  className="border rounded px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  onClick={startListening}
+                  title="Empezar dictado por voz"
+                >
+                  🎤
+                </button>
+              ) : (
+                <button 
+                  className="border rounded px-3 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 transition-colors animate-pulse" 
+                  onClick={stopListening} 
+                  title="Detener dictado - Grabando..."
+                >
+                  ⏹️
+                </button>
+              )}
+            </>
           )}
+          
           <button
-            className="border rounded px-3 bg-black text-white dark:bg-white dark:text-black"
+            className="border rounded px-3 py-2 bg-black text-white dark:bg-white dark:text-black hover:opacity-80 transition-opacity disabled:opacity-50"
             onClick={handleSend}
+            disabled={!input.trim() && !imageFile}
           >
             Enviar
           </button>
+        </div>
+        
+        <div className="text-xs text-gray-500 flex gap-4">
+          {speechSupported ? (
+            <span className="text-green-600">✅ Reconocimiento de voz disponible</span>
+          ) : (
+            <span className="text-red-600">❌ Reconocimiento de voz no disponible</span>
+          )}
+          
+          {ttsSupported ? (
+            <span className="text-green-600">✅ Síntesis de voz disponible</span>
+          ) : (
+            <span className="text-red-600">❌ Síntesis de voz no disponible</span>
+          )}
         </div>
       </div>
     </div>
