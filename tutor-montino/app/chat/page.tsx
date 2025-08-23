@@ -299,7 +299,7 @@ export default function ChatPage() {
   // Renderizar solo después de la hidratación para evitar errores
   if (!isClient) {
     return (
-      <div className="grid gap-4 bg-black min-h-screen text-white">
+      <div className="grid gap-4 bg-white min-h-screen text-black">
         <div className="flex items-center justify-center h-64">
           <div className="text-sm opacity-70">Cargando...</div>
         </div>
@@ -316,14 +316,14 @@ export default function ChatPage() {
         onClose={stopListening}
       />
       
-      <div className="grid gap-4 bg-black min-h-screen text-white" style={{ fontFamily: '"Inter", "SF Pro Display", -apple-system, sans-serif' }}>
-        <div className="flex gap-2 items-center flex-wrap p-4">
+      <div className="grid gap-4 bg-white min-h-screen text-black" style={{ fontFamily: '"Inter", "SF Pro Display", -apple-system, sans-serif' }}>
+        <div className="flex gap-2 items-center flex-wrap p-4 border-b border-gray-200">
           <span className="text-sm font-medium">Modo:</span>
           <button
             className={`px-3 py-1 rounded border transition-colors ${
               mode === "aprendiz" 
-                ? "bg-white text-black" 
-                : "border-gray-600 hover:bg-gray-800"
+                ? "bg-black text-white" 
+                : "border-gray-300 hover:bg-gray-100"
             }`}
             onClick={() => setMode("aprendiz")}
           >
@@ -332,8 +332,8 @@ export default function ChatPage() {
           <button
             className={`px-3 py-1 rounded border transition-colors ${
               mode === "verificador" 
-                ? "bg-white text-black" 
-                : "border-gray-600 hover:bg-gray-800"
+                ? "bg-black text-white" 
+                : "border-gray-300 hover:bg-gray-100"
             }`}
             onClick={() => setMode("verificador")}
           >
@@ -353,13 +353,13 @@ export default function ChatPage() {
         </div>
 
         {speechError && (
-          <div className="bg-red-900/30 border border-red-700 rounded p-3 mx-4 flex items-start gap-2">
-            <span className="text-red-400 text-sm flex-1">
+          <div className="bg-red-100 border border-red-300 rounded p-3 mx-4 flex items-start gap-2">
+            <span className="text-red-600 text-sm flex-1">
               🎤 {speechError}
             </span>
             <button 
               onClick={clearSpeechError}
-              className="text-red-400 hover:text-red-200 text-sm underline"
+              className="text-red-600 hover:text-red-800 text-sm underline"
             >
               Cerrar
             </button>
@@ -388,7 +388,7 @@ export default function ChatPage() {
                   className={`rounded px-3 py-2 text-sm ${
                     m.role === "user"
                       ? "bg-blue-600 text-white"
-                      : "bg-gray-800 text-gray-100"
+                      : "bg-gray-100 text-gray-900"
                   }`}
                 >
                   <div className="whitespace-pre-wrap">{m.text}</div>
@@ -407,9 +407,9 @@ export default function ChatPage() {
           </div>
         </div>
 
-        <div className="grid gap-2 p-4">
+        <div className="grid gap-2 p-4 border-t border-gray-200">
           {imagePreview && (
-            <div className="text-xs opacity-70 flex items-center gap-2 p-2 bg-gray-800 rounded">
+            <div className="text-xs opacity-70 flex items-center gap-2 p-2 bg-gray-100 rounded">
               <span>📎 Imagen adjunta:</span>
               <Image
                 src={imagePreview}
@@ -419,7 +419,7 @@ export default function ChatPage() {
                 height={40}
               />
               <button 
-                className="underline hover:no-underline text-blue-400" 
+                className="underline hover:no-underline text-blue-600" 
                 onClick={() => setImageFile(null)}
               >
                 Quitar
@@ -433,11 +433,11 @@ export default function ChatPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder="Escribe tu mensaje o pregunta..."
-              className="flex-1 border border-gray-600 rounded px-3 py-2 text-sm bg-gray-900 text-white resize-none min-h-[40px] max-h-[120px]"
+              className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm bg-white text-black resize-none min-h-[40px] max-h-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={1}
             />
             
-            <label className="cursor-pointer border border-gray-600 rounded px-3 py-2 hover:bg-gray-800 transition-colors text-sm flex items-center gap-1">
+            <label className="cursor-pointer border border-gray-300 rounded px-3 py-2 hover:bg-gray-100 transition-colors text-sm flex items-center gap-1">
               📎
               <span className="hidden sm:inline">Imagen</span>
               <input
@@ -458,7 +458,7 @@ export default function ChatPage() {
               <>
                 {!listening ? (
                   <button
-                    className="border border-gray-600 rounded px-3 py-2 hover:bg-gray-800 transition-colors"
+                    className="border border-gray-300 rounded px-3 py-2 hover:bg-gray-100 transition-colors"
                     onClick={startListening}
                     title="Empezar dictado por voz"
                   >
@@ -466,7 +466,7 @@ export default function ChatPage() {
                   </button>
                 ) : (
                   <button 
-                    className="border border-red-600 rounded px-3 py-2 bg-red-900/30 hover:bg-red-900/50 transition-colors animate-pulse" 
+                    className="border border-red-300 rounded px-3 py-2 bg-red-100 hover:bg-red-200 transition-colors animate-pulse" 
                     onClick={stopListening} 
                     title="Detener dictado - Grabando..."
                   >
@@ -477,7 +477,7 @@ export default function ChatPage() {
             )}
             
             <button
-              className="border rounded px-3 py-2 bg-white text-black hover:bg-gray-200 transition-opacity disabled:opacity-50"
+              className="border rounded px-3 py-2 bg-black text-white hover:bg-gray-800 transition-opacity disabled:opacity-50"
               onClick={handleSend}
               disabled={!input.trim() && !imageFile}
             >
@@ -485,20 +485,20 @@ export default function ChatPage() {
             </button>
           </div>
           
-          <div className="text-xs text-gray-400 flex gap-4">
+          <div className="text-xs text-gray-600 flex gap-4">
             {speechSupported ? (
-              <span className="text-green-500">✅ Reconocimiento de voz disponible</span>
+              <span className="text-green-600">✅ Reconocimiento de voz disponible</span>
             ) : (
-              <span className="text-red-500">❌ Reconocimiento de voz no disponible</span>
+              <span className="text-red-600">❌ Reconocimiento de voz no disponible</span>
             )}
             
             {ttsSupported ? (
-              <span className="text-green-500">✅ Síntesis de voz disponible</span>
+              <span className="text-green-600">✅ Síntesis de voz disponible</span>
             ) : (
-              <span className="text-red-500">❌ Síntesis de voz no disponible</span>
+              <span className="text-red-600">❌ Síntesis de voz no disponible</span>
             )}
             
-            <span className="text-blue-400">📹 Cámara IP integrada</span>
+            <span className="text-blue-600">📹 Cámara IP integrada</span>
           </div>
         </div>
       </div>
