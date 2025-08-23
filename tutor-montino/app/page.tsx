@@ -8,7 +8,7 @@ export default function Home() {
         con guía paso a paso, verificación de confianza, y un panel de logros para
         gamificar el aprendizaje.
       </p>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <a className="border rounded-lg p-4 hover:bg-black/5 dark:hover:bg-white/5" href="/chat">
           <div className="font-medium">Asistente Conversacional</div>
           <div className="text-sm opacity-75">Chat multimodal (voz+visión)</div>
@@ -26,8 +26,12 @@ export default function Home() {
           <div className="text-sm opacity-75">Insignias y progreso personal</div>
         </a>
         <a className="border rounded-lg p-4 hover:bg-black/5 dark:hover:bg-white/5" href="/analytics">
-          <div className="font-medium">Analytics</div>
+          <div className="font-medium">Análitica de Impacto</div>
           <div className="text-sm opacity-75">Métricas de impacto</div>
+        </a>
+        <a className="border rounded-lg p-4 hover:bg-black/5 dark:hover:bg-white/5" href="/bienestar">
+          <div className="font-medium">Bienestar Laboral y Derechos</div>
+          <div className="text-sm opacity-75">Recursos y orientación sobre derechos laborales</div>
         </a>
       </div>
     </div>
