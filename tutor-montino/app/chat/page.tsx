@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import CameraCapture from "../../components/CameraCapture";
+import TranscriptionOverlay from "../../components/TranscriptionOverlay";
 
 type ChatMessage = {
   id: string;
@@ -13,7 +16,7 @@ function generateId(): string {
   return Math.random().toString(36).slice(2);
 }
 
-type SpeechRecognitionResultLike = ArrayLike<{ transcript: string }>;
+type SpeechRecognitionResultLike = ArrayLike<{ transcript: string }> & { isFinal?: boolean };
 interface SpeechRecognitionEventLike {
   results: ArrayLike<SpeechRecognitionResultLike>;
 }
@@ -44,6 +47,7 @@ export default function ChatPage() {
   const [speechSupported, setSpeechSupported] = useState(false);
   const [ttsSupported, setTtsSupported] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
+  const [liveTranscript, setLiveTranscript] = useState("");
   
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionConstructor | null>(null);
@@ -96,12 +100,13 @@ export default function ChatPage() {
     }
     
     setSpeechError(null);
+    setLiveTranscript("");
     
     try {
       const rec = new speechRecognitionRef.current();
       rec.lang = "es-ES";
-      rec.interimResults = false;
-      rec.continuous = false;
+      rec.interimResults = true;
+      rec.continuous = true;
       
       rec.onstart = () => {
         console.log("Reconocimiento iniciado");
@@ -111,11 +116,27 @@ export default function ChatPage() {
       rec.onresult = (e: SpeechRecognitionEventLike) => {
         console.log("Resultado recibido:", e);
         try {
-          const transcript = Array.from(e.results)
-            .map((r) => (r as SpeechRecognitionResultLike)[0].transcript)
-            .join(" ");
-          console.log("Transcripción:", transcript);
-          setInput((prev) => (prev ? prev + " " : "") + transcript);
+          let finalTranscript = "";
+          let interimTranscript = "";
+          
+          for (let i = 0; i < e.results.length; i++) {
+            const result = e.results[i] as SpeechRecognitionResultLike;
+            const transcript = result[0].transcript;
+            
+            if (result.isFinal) {
+              finalTranscript += transcript + " ";
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+          
+          const currentTranscript = finalTranscript + interimTranscript;
+          setLiveTranscript(currentTranscript);
+          
+          if (finalTranscript) {
+            setInput((prev) => (prev + finalTranscript).trim());
+          }
+          
         } catch (error) {
           console.error("Error procesando resultado:", error);
         }
@@ -124,6 +145,7 @@ export default function ChatPage() {
       rec.onend = () => {
         console.log("Reconocimiento terminado");
         setListening(false);
+        setLiveTranscript("");
       };
       
       rec.onerror = (event: Event & { error?: string }) => {
@@ -131,6 +153,7 @@ export default function ChatPage() {
         const errorMsg = event.error || "Error desconocido";
         setSpeechError(`Error: ${errorMsg}`);
         setListening(false);
+        setLiveTranscript("");
         
         // Mostrar mensaje específico según el error
         if (errorMsg === "not-allowed") {
@@ -152,6 +175,7 @@ export default function ChatPage() {
       console.error("Error al crear reconocimiento:", error);
       setSpeechError("Error al inicializar el reconocimiento de voz");
       setListening(false);
+      setLiveTranscript("");
     }
   };
 
@@ -161,6 +185,7 @@ export default function ChatPage() {
       recognitionRef.current.stop();
     }
     setListening(false);
+    setLiveTranscript("");
   };
 
   const speak = (text: string) => {
@@ -255,7 +280,7 @@ export default function ChatPage() {
   // Renderizar solo después de la hidratación para evitar errores
   if (!isClient) {
     return (
-      <div className="grid gap-4">
+      <div className="grid gap-4 bg-black min-h-screen text-white">
         <div className="flex items-center justify-center h-64">
           <div className="text-sm opacity-70">Cargando...</div>
         </div>
@@ -264,182 +289,200 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="flex gap-2 items-center flex-wrap">
-        <span className="text-sm font-medium">Modo:</span>
-        <button
-          className={`px-3 py-1 rounded border transition-colors ${
-            mode === "aprendiz" 
-              ? "bg-black text-white dark:bg-white dark:text-black" 
-              : "hover:bg-gray-50 dark:hover:bg-gray-800"
-          }`}
-          onClick={() => setMode("aprendiz")}
-        >
-          Aprendiz
-        </button>
-        <button
-          className={`px-3 py-1 rounded border transition-colors ${
-            mode === "verificador" 
-              ? "bg-black text-white dark:bg-white dark:text-black" 
-              : "hover:bg-gray-50 dark:hover:bg-gray-800"
-          }`}
-          onClick={() => setMode("verificador")}
-        >
-          Verificador
-        </button>
-        
-        {ttsSupported && (
-          <label className="ml-auto flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={speakReplies}
-              onChange={(e) => setSpeakReplies(e.target.checked)}
-            />
-            Leer respuestas
-          </label>
-        )}
-      </div>
-
-      {speechError && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 flex items-start gap-2">
-          <span className="text-red-600 dark:text-red-400 text-sm flex-1">
-            🎤 {speechError}
-          </span>
-          <button 
-            onClick={clearSpeechError}
-            className="text-red-600 hover:text-red-800 text-sm underline"
+    <>
+      {/* Overlay de transcripción minimalista */}
+      <TranscriptionOverlay 
+        isListening={listening}
+        currentText={liveTranscript}
+        onClose={stopListening}
+      />
+      
+      <div className="grid gap-4 bg-black min-h-screen text-white" style={{ fontFamily: '"Inter", "SF Pro Display", -apple-system, sans-serif' }}>
+        <div className="flex gap-2 items-center flex-wrap p-4">
+          <span className="text-sm font-medium">Modo:</span>
+          <button
+            className={`px-3 py-1 rounded border transition-colors ${
+              mode === "aprendiz" 
+                ? "bg-white text-black" 
+                : "border-gray-600 hover:bg-gray-800"
+            }`}
+            onClick={() => setMode("aprendiz")}
           >
-            Cerrar
+            Aprendiz
           </button>
+          <button
+            className={`px-3 py-1 rounded border transition-colors ${
+              mode === "verificador" 
+                ? "bg-white text-black" 
+                : "border-gray-600 hover:bg-gray-800"
+            }`}
+            onClick={() => setMode("verificador")}
+          >
+            Verificador
+          </button>
+          
+          {ttsSupported && (
+            <label className="ml-auto flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={speakReplies}
+                onChange={(e) => setSpeakReplies(e.target.checked)}
+              />
+              Leer respuestas
+            </label>
+          )}
         </div>
-      )}
 
-      <div className="border rounded p-3 h-[50vh] overflow-auto bg-black/5 dark:bg-white/5">
-        {messages.length === 0 && (
-          <div className="text-sm opacity-70">
-            {mode === "aprendiz"
-              ? "Describe qué documento necesitas y te guiaré paso a paso. También puedes adjuntar una imagen de un documento existente."
-              : "Pega tu borrador o adjunta una imagen del documento y te ayudaré a verificarlo y mejorarlo."}
-          </div>
-        )}
-        <div className="grid gap-3">
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className={
-                m.role === "user"
-                  ? "justify-self-end max-w-[80%]"
-                  : "justify-self-start max-w-[80%]"
-              }
-            >
-              <div
-                className={`rounded px-3 py-2 text-sm ${
-                  m.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 dark:bg-gray-800"
-                }`}
-              >
-                <div className="whitespace-pre-wrap">{m.text}</div>
-                {m.imageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={m.imageUrl}
-                    alt="adjunta"
-                    className="mt-2 max-h-40 rounded border"
-                  />
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid gap-2">
-        {imagePreview && (
-          <div className="text-xs opacity-70 flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-            <span>📎 Imagen adjunta:</span>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imagePreview}
-              alt="vista previa"
-              className="h-10 w-10 object-cover rounded border"
-            />
+        {speechError && (
+          <div className="bg-red-900/30 border border-red-700 rounded p-3 mx-4 flex items-start gap-2">
+            <span className="text-red-400 text-sm flex-1">
+              🎤 {speechError}
+            </span>
             <button 
-              className="underline hover:no-underline text-blue-600 dark:text-blue-400" 
-              onClick={() => setImageFile(null)}
+              onClick={clearSpeechError}
+              className="text-red-400 hover:text-red-200 text-sm underline"
             >
-              Quitar
+              Cerrar
             </button>
           </div>
         )}
-        
-        <div className="flex gap-2 items-center">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyPress}
-            placeholder="Escribe tu mensaje o pregunta..."
-            className="flex-1 border rounded px-3 py-2 text-sm bg-transparent resize-none min-h-[40px] max-h-[120px]"
-            rows={1}
-          />
-          
-          <label className="cursor-pointer border rounded px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm flex items-center gap-1">
-            📎
-            <span className="hidden sm:inline">Imagen</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-              className="hidden"
-              title="Adjuntar imagen"
-            />
-          </label>
-          
-          {speechSupported && (
-            <>
-              {!listening ? (
-                <button
-                  className="border rounded px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                  onClick={startListening}
-                  title="Empezar dictado por voz"
-                >
-                  🎤
-                </button>
-              ) : (
-                <button 
-                  className="border rounded px-3 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 transition-colors animate-pulse" 
-                  onClick={stopListening} 
-                  title="Detener dictado - Grabando..."
-                >
-                  ⏹️
-                </button>
-              )}
-            </>
+
+        <div className="h-[50vh] overflow-auto px-4">
+          {messages.length === 0 && (
+            <div className="text-sm opacity-70 text-center py-8">
+              {mode === "aprendiz"
+                ? "Describe qué documento necesitas y te guiaré paso a paso. También puedes adjuntar una imagen de un documento existente o capturar desde cámara IP."
+                : "Pega tu borrador o adjunta una imagen del documento y te ayudaré a verificarlo y mejorarlo. También puedes usar la cámara IP para capturar documentos."}
+            </div>
           )}
-          
-          <button
-            className="border rounded px-3 py-2 bg-black text-white dark:bg-white dark:text-black hover:opacity-80 transition-opacity disabled:opacity-50"
-            onClick={handleSend}
-            disabled={!input.trim() && !imageFile}
-          >
-            Enviar
-          </button>
+          <div className="grid gap-3">
+            {messages.map((m) => (
+              <div
+                key={m.id}
+                className={
+                  m.role === "user"
+                    ? "justify-self-end max-w-[80%]"
+                    : "justify-self-start max-w-[80%]"
+                }
+              >
+                <div
+                  className={`rounded px-3 py-2 text-sm ${
+                    m.role === "user"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-800 text-gray-100"
+                  }`}
+                >
+                  <div className="whitespace-pre-wrap">{m.text}</div>
+                  {m.imageUrl && (
+                    <Image
+                      src={m.imageUrl}
+                      alt="adjunta"
+                      className="mt-2 max-h-40 rounded border"
+                      width={300}
+                      height={200}
+                    />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        
-        <div className="text-xs text-gray-500 flex gap-4">
-          {speechSupported ? (
-            <span className="text-green-600">✅ Reconocimiento de voz disponible</span>
-          ) : (
-            <span className="text-red-600">❌ Reconocimiento de voz no disponible</span>
+
+        <div className="grid gap-2 p-4">
+          {imagePreview && (
+            <div className="text-xs opacity-70 flex items-center gap-2 p-2 bg-gray-800 rounded">
+              <span>📎 Imagen adjunta:</span>
+              <Image
+                src={imagePreview}
+                alt="vista previa"
+                className="h-10 w-10 object-cover rounded border"
+                width={40}
+                height={40}
+              />
+              <button 
+                className="underline hover:no-underline text-blue-400" 
+                onClick={() => setImageFile(null)}
+              >
+                Quitar
+              </button>
+            </div>
           )}
           
-          {ttsSupported ? (
-            <span className="text-green-600">✅ Síntesis de voz disponible</span>
-          ) : (
-            <span className="text-red-600">❌ Síntesis de voz no disponible</span>
-          )}
+          <div className="flex gap-2 items-center">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder="Escribe tu mensaje o pregunta..."
+              className="flex-1 border border-gray-600 rounded px-3 py-2 text-sm bg-gray-900 text-white resize-none min-h-[40px] max-h-[120px]"
+              rows={1}
+            />
+            
+            <label className="cursor-pointer border border-gray-600 rounded px-3 py-2 hover:bg-gray-800 transition-colors text-sm flex items-center gap-1">
+              📎
+              <span className="hidden sm:inline">Imagen</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+                className="hidden"
+                title="Adjuntar imagen"
+              />
+            </label>
+            
+            <CameraCapture 
+              onCapture={(file) => setImageFile(file)}
+              disabled={listening}
+            />
+            
+            {speechSupported && (
+              <>
+                {!listening ? (
+                  <button
+                    className="border border-gray-600 rounded px-3 py-2 hover:bg-gray-800 transition-colors"
+                    onClick={startListening}
+                    title="Empezar dictado por voz"
+                  >
+                    🎤
+                  </button>
+                ) : (
+                  <button 
+                    className="border border-red-600 rounded px-3 py-2 bg-red-900/30 hover:bg-red-900/50 transition-colors animate-pulse" 
+                    onClick={stopListening} 
+                    title="Detener dictado - Grabando..."
+                  >
+                    ⏹️
+                  </button>
+                )}
+              </>
+            )}
+            
+            <button
+              className="border rounded px-3 py-2 bg-white text-black hover:bg-gray-200 transition-opacity disabled:opacity-50"
+              onClick={handleSend}
+              disabled={!input.trim() && !imageFile}
+            >
+              Enviar
+            </button>
+          </div>
+          
+          <div className="text-xs text-gray-400 flex gap-4">
+            {speechSupported ? (
+              <span className="text-green-500">✅ Reconocimiento de voz disponible</span>
+            ) : (
+              <span className="text-red-500">❌ Reconocimiento de voz no disponible</span>
+            )}
+            
+            {ttsSupported ? (
+              <span className="text-green-500">✅ Síntesis de voz disponible</span>
+            ) : (
+              <span className="text-red-500">❌ Síntesis de voz no disponible</span>
+            )}
+            
+            <span className="text-blue-400">📹 Cámara IP integrada</span>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
