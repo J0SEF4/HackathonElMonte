@@ -1,4 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(req: NextRequest) {
+  const { message, mode } = await req.json();
+
+  let systemPrompt = "Eres un asistente municipal experto en trámites.";
+  if (mode === "decreto") {
+    systemPrompt = "Eres un asistente municipal experto en decretos. Ayuda a redactar, revisar y explicar decretos municipales de forma clara y precisa.";
+  } else if (mode === "formulario") {
+    systemPrompt = "Eres un asistente municipal experto en formularios. Ayuda a crear, completar y revisar formularios municipales.";
+  } else if (mode === "reporte") {
+    systemPrompt = "Eres un asistente municipal experto en reportes. Ayuda a redactar y analizar reportes municipales.";
+  } else if (mode === "aprendiz") {
+    systemPrompt = "Eres un tutor municipal que guía paso a paso en cualquier trámite, documento o proceso municipal.";
+  } else if (mode === "verificador") {
+    systemPrompt = "Eres un verificador experto que revisa y sugiere mejoras en documentos municipales.";
+  }
+
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+  model: "meta-llama/llama-3.1-405b-instruct",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: message }
+        ],
+        max_tokens: 800,
+        temperature: 0.3
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("OpenRouter API error:", response.status, errorText);
+      return NextResponse.json({ reply: `Error de OpenRouter: ${response.status} - ${errorText}` });
+    }
+
+    const data = await response.json();
+    if (!data.choices || !data.choices[0]?.message?.content) {
+      console.error("Respuesta inesperada de OpenRouter:", JSON.stringify(data));
+      return NextResponse.json({ reply: "No se pudo generar respuesta (respuesta inesperada de la IA)." });
+    }
+    const reply = data.choices[0].message.content;
+    return NextResponse.json({ reply });
+  } catch (error) {
+    console.error("Error al contactar OpenRouter:", error);
+    return NextResponse.json({ reply: "Error al contactar OpenRouter. Revisa tu API key y conexión a internet." });
+  }
+}
+/*import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
 export async function POST(req: NextRequest) {
@@ -142,4 +196,4 @@ function fallbackReply(mode: string, imageName: string | null, message: string) 
   }
 
   return reply;
-}
+}*/
