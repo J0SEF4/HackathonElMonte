@@ -89,6 +89,25 @@ export default function ChatPage() {
     return () => URL.revokeObjectURL(url);
   }, [imageFile]);
 
+  // Reiniciar chat cuando cambie el modo
+  useEffect(() => {
+    setMessages([]);
+    setInput("");
+    setImageFile(null);
+    setSpeechError(null);
+    setLiveTranscript("");
+    
+    // Detener reconocimiento de voz si está activo
+    if (listening && recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    
+    // Cancelar síntesis de voz si está activa
+    if (ttsSupported && isClient) {
+      window.speechSynthesis.cancel();
+    }
+  }, [mode]);
+
   const startListening = () => {
     if (!speechRecognitionRef.current || listening || !isClient) {
       console.log("No se puede iniciar:", { 
