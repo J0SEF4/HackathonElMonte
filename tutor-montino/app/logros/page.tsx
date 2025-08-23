@@ -26,9 +26,10 @@ export default function LogrosPage() {
 
   return (
     <div className="grid gap-4">
-      <h2 className="text-xl font-semibold">Logros</h2>
+  <h2 className="text-xl font-semibold">Logros</h2>
+  <p className="text-sm text-black/60 dark:text-white/60 mb-4">¡Desbloquea insignias y sigue tu progreso personal!</p>
       <div className="grid gap-2">
-        <div className="text-sm">Progreso general</div>
+        <div className="text-sm font-bold">Progreso general</div>
         <ProgressBar value={progress} />
       </div>
       <div className="grid gap-2 sm:grid-cols-2">

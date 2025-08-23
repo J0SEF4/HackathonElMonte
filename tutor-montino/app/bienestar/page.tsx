@@ -44,7 +44,7 @@ export default function BienestarPage() {
       <div className="grid lg:grid-cols-2 gap-8 mx-auto mt-4">
         {/* Columna izquierda: Check-in */}
         <div className="grid bg-white/80 border border-blue-100 rounded-2xl shadow-sm p-6">
-          <div className="flex gap-2 min-h-[28px] text-base font-semibold text-blue-800">
+          <div className="flex gap-2 min-h-[28px] text-base font-semibold text-black">
             <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" stroke="#38bdf8" strokeWidth="2"/><path d="M7 10l2 2 4-4" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <strong>Check-in de Bienestar</strong>
           </div>
@@ -107,12 +107,12 @@ export default function BienestarPage() {
 
           {result && (
             <div className="grid gap-3 mt-4">
-              <div className="flex items-center gap-2 min-h-[28px] text-base font-semibold text-blue-800">
+              <div className="flex items-center gap-2 min-h-[28px] text-base font-semibold text-black">
                 <svg width="18" height="18" fill="none" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" stroke="#38bdf8" strokeWidth="2"/><path d="M10 5v5l3 3" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <strong>Resultado</strong>
               </div>
               <div className="grid gap-2">
-                <div className="text-sm">Puntaje: <span className="font-bold text-blue-900">{result.score}/100</span></div>
+                <div className="text-sm">Puntaje: <span className="font-bold text-black">{result.score}/100</span></div>
                 <ProgressBar value={result.score / 100} />
                 <div className="text-sm">Riesgo: <span className={
                   result.risk === "low" ? "text-green-600 font-bold" :
@@ -130,7 +130,7 @@ export default function BienestarPage() {
 
         {/* Columna derecha: Derechos y recursos */}
         <div className="grid gap-6 bg-white/80 border border-green-100 rounded-2xl shadow-sm p-6">
-          <div className="flex gap-2 min-h-[28px] text-base font-semibold text-green-800">
+          <div className="flex gap-2 min-h-[28px] text-base font-semibold text-black">
             <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#22c55e" strokeWidth="2"/><path d="M7 10l2 2 4-4" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <strong>Derechos y recursos</strong>
           </div>
