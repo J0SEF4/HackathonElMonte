@@ -5,6 +5,5 @@ export async function GET() {
     eficiencia: 0.18,
     calidad: 0.27,
     bienestar: 0.12,
-    replicabilidad: true,
   });
 }

@@ -36,7 +36,7 @@ export default function RootLayout({
               <Link href="/aprendiz">Modo Aprendiz</Link>
               <Link href="/verificador">Verificador</Link>
               <Link href="/logros">Logros</Link>
-              <Link href="/analytics">Analytics</Link>
+              <Link href="/analytics">Análitica</Link>
               <Link href="/bienestar">Bienestar</Link>
             </div>
           </nav>
