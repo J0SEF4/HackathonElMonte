@@ -21,32 +21,32 @@ export default function Home() {
           <a className="bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-2xl p-6 flex flex-col items-center shadow-lg hover:scale-[1.03] transition-transform duration-200 group" href="/chat">
             <FaComments className="text-3xl mb-2 text-[#38BDF8] group-hover:scale-110 transition-transform" />
             <div className="font-semibold text-lg text-black dark:text-white">Asistente Conversacional</div>
-            <div className="text-sm text-black/60 dark:text-white/60">Chat multimodal (voz+visión)</div>
+            <div className="text-sm text-center text-black/60 dark:text-white/60">Chat multimodal (voz+visión) en Modo Aprendiz/Verificador</div>
           </a>
           <a className="bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-2xl p-6 flex flex-col items-center shadow-lg hover:scale-[1.03] transition-transform duration-200 group" href="/aprendiz">
             <FaGraduationCap className="text-3xl mb-2 text-[#4ADE80] group-hover:scale-110 transition-transform" />
             <div className="font-semibold text-lg text-black dark:text-white">Modo Aprendiz</div>
-            <div className="text-sm text-black/60 dark:text-white/60">Guía procedimental en tiempo real</div>
+            <div className="text-sm text-center text-black/60 dark:text-white/60">Historial de chats en modo guía procedimental en tiempo real</div>
           </a>
           <a className="bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-2xl p-6 flex flex-col items-center shadow-lg hover:scale-[1.03] transition-transform duration-200 group" href="/verificador">
             <FaCheckCircle className="text-3xl mb-2 text-[#38BDF8] group-hover:scale-110 transition-transform" />
             <div className="font-semibold text-lg text-black dark:text-white">Verificador de Confianza</div>
-            <div className="text-sm text-black/60 dark:text-white/60">Valida borradores y sugiere mejoras</div>
+            <div className="text-sm text-center text-black/60 dark:text-white/60">Historial de chats en modo validar borradores y sugerir mejoras</div>
           </a>
           <a className="bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-2xl p-6 flex flex-col items-center shadow-lg hover:scale-[1.03] transition-transform duration-200 group" href="/logros">
             <FaTrophy className="text-3xl mb-2 text-[#FDE68A] group-hover:scale-110 transition-transform" />
             <div className="font-semibold text-lg text-black dark:text-white">Logros</div>
-            <div className="text-sm text-black/60 dark:text-white/60">Insignias y progreso personal</div>
+            <div className="text-sm text-center text-black/60 dark:text-white/60">Insignias y progreso personal</div>
           </a>
           <a className="bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-2xl p-6 flex flex-col items-center shadow-lg hover:scale-[1.03] transition-transform duration-200 group" href="/analytics">
             <FaChartBar className="text-3xl mb-2 text-[#4ADE80] group-hover:scale-110 transition-transform" />
             <div className="font-semibold text-lg text-black dark:text-white">Análitica de Impacto</div>
-            <div className="text-sm text-black/60 dark:text-white/60">Métricas de impacto</div>
+            <div className="text-sm text-center text-black/60 dark:text-white/60">Métricas de impacto</div>
           </a>
           <a className="bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-2xl p-6 flex flex-col items-center shadow-lg hover:scale-[1.03] transition-transform duration-200 group" href="/bienestar">
             <FaHeart className="text-3xl mb-2 text-[#F43F5E] group-hover:scale-110 transition-transform" />
             <div className="font-semibold text-lg text-black dark:text-white">Bienestar y Derechos</div>
-            <div className="text-sm text-black/60 dark:text-white/60">Bienestar laboral y recursos sobre derechos laborales</div>
+            <div className="text-sm text-center text-black/60 dark:text-white/60">Bienestar laboral y recursos sobre derechos laborales</div>
           </a>
         </div>
       </div>
